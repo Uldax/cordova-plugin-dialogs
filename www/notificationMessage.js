@@ -26,7 +26,7 @@ var exec = require('cordova/exec'),
 var NotificationPermission = {
     default : 'default',
     denied : 'denied',
-    granted : 'granted'  
+    granted : 'granted'
 },
 
 NotificationDirection = {
@@ -94,7 +94,7 @@ function hasPermission (callback) {
 }
 
 
-var Notification = function (title , options) {  
+var Notification = function (title , options) {
     if (arguments.length === 0 || typeof title !== 'string') {
         throw new TypeError('Failed to construct \'Notification\': 1 argument required, but only 0 present');
     }
@@ -113,11 +113,18 @@ var Notification = function (title , options) {
     createConstProperty(this, 'icon', options.icon || null);
     createConstProperty(this, 'tag', options.tag);
     createConstProperty(this, 'dir', dir);
-    
-    //this._id = notification_idCounter++;
 
-    var self = this,
-    this.onclick = null;
+    //this._id = notification_idCounter++;
+    var self = this;
+    //this.onclick = null;
+    //Setter because we don't use addEventListener ?
+    Object.defineProperty(this, "onclick", {
+        set: function (callBack) {
+            console.log('in the set function');
+            exec(null, null, 'NotificationMessage', 'onclick', [self.tag,callback]);
+            }
+    });
+
     this.onerror = null;
     //deprecate
     this.onshow = null;
@@ -128,15 +135,14 @@ var Notification = function (title , options) {
         console.log('EventTargetDetected');
         var eventTarget = document.createDocumentFragment();
         function delegate(method) {
-          this[method] = eventTarget[method].bind(eventTarget);
+            this[method] = eventTarget[method].bind(eventTarget);
         }
         [
           'addEventListener',
           'dispatchEvent',
           'removeEventListener'
         ].forEach(delegate, this);
-    }
-    else {
+    } else {
         //Create the eventHandler
         targetEventHandlers = {};
         targetEventHandlers.onclick = channel.create('click');
@@ -147,7 +153,7 @@ var Notification = function (title , options) {
             var e = type.toLowerCase();
             //if the type is a channel(EventHandler)
             if ((targetEventHandlers[e] !== 'undefined')) {
-                targetEventHandlers[e].subscribe(handler); 
+                targetEventHandlers[e].subscribe(handler);
             } else {
                 console.log('Error with channel');
             }
@@ -159,7 +165,7 @@ var Notification = function (title , options) {
                 targetEventHandlers[e].unsubscribe(handler);
             } else {
                 console.log('Error with channel in removeListener');
-            }   
+            }
         };
 
         this.dispatchEvent = function (type) {
@@ -177,7 +183,7 @@ var Notification = function (title , options) {
 
     //Continue running these steps asynchronouusly.
     setTimeout(function() {
-        //If the notification platform supports icons, 
+        //If the notification platform supports icons,
         //the user agent may start fetching notification's icon URL at this point, if icon URL is set.
         self.show();
     }, 0);
@@ -195,7 +201,7 @@ Notification.requestePermission = function (callback) {
 };
 
 //If notification is neither in the list of pending notifications nor in the list of active notifications, terminate these steps
-//Queue a task to remove notification from either the list of pending notifications or the list of active notifications, 
+//Queue a task to remove notification from either the list of pending notifications or the list of active notifications,
 //and fire an event named close on notification.
 Notification.prototype.close = function() {
     if (this.tag) {
@@ -211,13 +217,13 @@ Notification.prototype.show = function() {
         Notification.requestePermission();
     }
     if (Notification.permission !== NotificationPermission.granted){
-        //cancel any ongoing fetch for notification's icon URL, queue a task to fire an event 
+        //cancel any ongoing fetch for notification's icon URL, queue a task to fire an event
         console.log('not Allowed');
         //this.dispatchEvent('error');
         this.dispatchEvent(createEvent('onerror',null));
     } else {
         var options = createJSONData(this);
-        //display notification on device 
+        //display notification on device
         console.log(options);
         exec(null, this.error, 'NotificationMessage', 'show', [ this.title, options]);
         //If displaying fails (e.g. the notification platform returns an error), fire an event named error on notification and terminate these steps.
